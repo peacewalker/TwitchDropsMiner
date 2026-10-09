@@ -1,0 +1,171 @@
+name: Sync upstream and publish browser-free image
+on:
+  push:
+    branches: [webui]
+  pull_request:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lite-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      upstream: ${{ steps.source.outputs.upstream }}
+      image: ${{ steps.source.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge DevilXD directly
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/DevilXD/TwitchDropsMiner.git
+          git fetch upstream master
+          if ! git merge --no-edit upstream/master; then
+            git merge --abort
+            echo '::error::Upstream merge conflicts; published latest remains unchanged.'
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-lite.txt
+      - name: Validate core and WebUI compatibility
+        run: |
+          python -m pip install -r requirements-lite.txt pytest pytest-asyncio
+          python -m pytest -q
+          python -m compileall -q main_webui.py webui docker
+          sh -n docker/entrypoint-lite.sh
+      - name: Save validated upstream merge
+        if: github.event_name != 'pull_request'
+        run: git push origin HEAD:webui
+      - name: Export exact source revisions
+        id: source
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "upstream=$(git rev-parse upstream/master 2>/dev/null || echo unmerged-pr)" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${OWNER,,}/twitch-drops-miner" >> "$GITHUB_OUTPUT"
+          git archive --format=tar HEAD > /tmp/lite-source.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lite-source
+          path: /tmp/lite-source.tar
+          retention-days: 1
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lite-source
+      - run: tar -xf lite-source.tar
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Avoid rebuilding published revisions
+        id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          if [ "$EVENT" = schedule ] && docker buildx imagetools inspect "$IMAGE:sha-$SHA" >/dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/build-push-action@v6
+        if: steps.check.outputs.exists != 'true'
+        with:
+          context: .
+          file: Dockerfile.lite
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: ${{ needs.prepare.outputs.image }}:sha-${{ needs.prepare.outputs.sha }}-${{ matrix.arch }}
+          build-args: |
+            UPSTREAM_SHA=${{ needs.prepare.outputs.upstream }}
+            WEBUI_SHA=${{ needs.prepare.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=lite-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=lite-${{ matrix.arch }}
+      - name: Smoke test image before publishing
+        if: steps.check.outputs.exists != 'true'
+        env:
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run -d --name lite-smoke -p 127.0.0.1:5800:5800 "$IMAGE:sha-$SHA-$ARCH"
+          trap 'docker logs lite-smoke; docker rm -f lite-smoke' EXIT
+          docker exec lite-smoke python -c 'import shutil,importlib.util; assert not any(shutil.which(n) for n in ("chromium", "chromium-browser", "Xvfb", "x11vnc")); assert importlib.util.find_spec("zendriver") is None'
+          python3 docker/smoke.py
+      - name: Push validated architecture
+        if: github.event_name != 'pull_request' && steps.check.outputs.exists != 'true'
+        env:
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          ARCH: ${{ matrix.arch }}
+        run: docker push "$IMAGE:sha-$SHA-$ARCH"
+  publish:
+    needs: [prepare, build]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish after both architectures pass
+        env:
+          EVENT: ${{ github.event_name }}
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          UPSTREAM: ${{ needs.prepare.outputs.upstream }}
+        run: |
+          if [ "$EVENT" = schedule ] && docker buildx imagetools inspect "$IMAGE:sha-$SHA" >/dev/null 2>&1; then
+            echo 'No new revision; image is unchanged.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          docker buildx imagetools create \
+            -t "$IMAGE:latest" -t "$IMAGE:lite" -t "$IMAGE:sha-$SHA" \
+            "$IMAGE:sha-$SHA-amd64" "$IMAGE:sha-$SHA-arm64"
+          echo "Published: $IMAGE:latest" >> "$GITHUB_STEP_SUMMARY"
+          echo "WebUI revision: $SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "DevilXD revision: $UPSTREAM" >> "$GITHUB_STEP_SUMMARY"

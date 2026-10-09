@@ -1,0 +1,14 @@
+services:
+  twitch-drops-miner:
+    image: ghcr.io/peacewalker/twitch-drops-miner:latest
+    container_name: twitch-drops-miner
+    ports:
+      - "5800:5800"
+    volumes:
+      - ./config:/TwitchDropsMiner/config
+      - ./cache:/TwitchDropsMiner/cache
+    environment:
+      TZ: Asia/Shanghai
+      USER_ID: "1000"
+      GROUP_ID: "1000"
+    restart: unless-stopped

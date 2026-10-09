@@ -54,10 +54,25 @@ setattr(
 )
 
 
-if os.environ.get("WEBUI_TWITCH_LOGIN", "android-browser") == "android-browser":
+if os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "android-browser":
     import twitch as _twitch
 
     async def _android_browser_login(self) -> str:
         return await self._twitch.gui.login.ask_browser_login()
 
     _twitch._AuthState._oauth_login = _android_browser_login
+
+
+if os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "cookie-only":
+    import asyncio
+    import twitch as _twitch
+    from translate import _
+
+    async def _cookie_only_login(self) -> str:
+        gui = self._twitch.gui
+        gui.login.update(_("gui", "login", "required"), None)
+        gui.print("Cookie missing or expired. Copy a valid cookies.jar into config, then restart the container.")
+        await gui.coro_unless_closed(asyncio.Event().wait())
+        raise RuntimeError("Cookie-only login was interrupted")
+
+    _twitch._AuthState._oauth_login = _cookie_only_login

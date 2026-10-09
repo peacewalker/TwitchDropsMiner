@@ -1,0 +1,31 @@
+FROM python:3.12-slim-bookworm AS dependencies
+WORKDIR /build
+COPY requirements.txt requirements-lite.txt ./
+RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements-lite.txt
+
+FROM python:3.12-slim-bookworm
+ARG UPSTREAM_SHA=unknown
+ARG WEBUI_SHA=unknown
+LABEL org.opencontainers.image.title="Twitch Drops Miner WebUI Lite" \
+      org.opencontainers.image.source="https://github.com/fireph/TwitchDropsMiner" \
+      org.opencontainers.image.revision="${WEBUI_SHA}" \
+      io.twitchdropsminer.upstream-revision="${UPSTREAM_SHA}"
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
+    WEBUI_HOST=0.0.0.0 WEBUI_PORT=5800 WEBUI_TWITCH_LOGIN=cookie-only \
+    USER_ID=1000 GROUP_ID=1000
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata gosu openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 1000 miner && useradd -u 1000 -g miner -M miner
+COPY --from=dependencies /opt/venv /opt/venv
+WORKDIR /TwitchDropsMiner
+COPY . .
+RUN rm -rf tests .github env .venv __pycache__ \
+    && rm -f webui/browser_login.py webui/browser_display.py \
+    && mkdir -p config cache \
+    && chown -R 1000:1000 /TwitchDropsMiner \
+    && chmod +x docker/entrypoint-lite.sh
+EXPOSE 5800
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["python", "docker/healthcheck.py"]
+ENTRYPOINT ["/TwitchDropsMiner/docker/entrypoint-lite.sh"]

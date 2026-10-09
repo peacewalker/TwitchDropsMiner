@@ -29,8 +29,9 @@ class LoginFormAdapter:
         self._confirm = asyncio.Event()
         self.page_url: "URL | None" = None
         self.browser_login_enabled = (
-            os.environ.get("WEBUI_TWITCH_LOGIN", "android-browser") == "android-browser"
+            os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "android-browser"
         )
+        self.cookie_only_login = os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "cookie-only"
         self._browser_cancel = asyncio.Event()
         if self.browser_login_enabled:
             from webui.browser_display import BrowserDisplay

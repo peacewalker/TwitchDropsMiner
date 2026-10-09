@@ -129,6 +129,10 @@ class LoginSection:
                         else "\n-"
                     ),
                 )
+            if self._manager.login.cookie_only_login:
+                ui.label("请将有效 cookies.jar 放入配置目录，然后重启容器。").classes("text-xs").bind_visibility_from(
+                    self, "_login_state", backward=lambda s: s == "required"
+                )
             ui.button(
                 on_click=lambda: self._on_btn_click(browser_dialog),
             ).props("dense").classes("text-xs").bind_text_from(
@@ -145,8 +149,10 @@ class LoginSection:
                 self,
                 "_login_state",
                 backward=lambda s: (
-                    s in ("logged_in", "required")
-                    or (s == "logging_in" and self._manager.login.browser_login_enabled)
+                    not self._manager.login.cookie_only_login and (
+                        s in ("logged_in", "required")
+                        or (s == "logging_in" and self._manager.login.browser_login_enabled)
+                    )
                 ),
             ).bind_enabled_from(self, "_btn_enabled")
 
