@@ -58,7 +58,7 @@ docker compose -f compose.lite.yml restart
 docker build -f Dockerfile.lite -t twitch-drops-miner:lite .
 ```
 
-采用 Python slim 多阶段构建，安装 Python 依赖后复制运行环境，运行镜像不包含构建工具。实际体积以构建结果为准，不能把内存占用与镜像磁盘体积混为一谈。
+采用 Alpine + PyInstaller 多阶段构建，最终镜像仅包含打包程序与必要系统库，不保留 Python 安装环境、pip 或构建工具。沿用原有打包配置，裁剪未使用的 NiceGUI 图表、编辑器等静态资源和 source map，并排除浏览器登录模块。实际压缩下载体积和部署后体积以构建结果为准。
 
 ## 验证与来源
 

@@ -87,6 +87,9 @@ if UI_BACKEND == "nicegui":
     excludes = [
         "tkinter",
         "Tkinter",
+        "webui.browser_login",
+        "webui.browser_display",
+        "zendriver",
         # NOTE: nicegui/ui.py eagerly imports ALL elements at module level,
         # so no nicegui.elements.* modules can be listed here — they would crash on startup.
         # Asset/data file pruning for unused elements is handled below via a.datas filtering.

@@ -130,8 +130,10 @@ jobs:
         run: |
           docker run -d --name lite-smoke -p 127.0.0.1:5800:5800 "$IMAGE:sha-$SHA-$ARCH"
           trap 'docker logs lite-smoke; docker rm -f lite-smoke' EXIT
-          docker exec lite-smoke python -c 'import shutil,importlib.util; assert not any(shutil.which(n) for n in ("chromium", "chromium-browser", "Xvfb", "x11vnc")); assert importlib.util.find_spec("zendriver") is None'
+          docker exec lite-smoke sh -c 'for name in python python3 pip chromium chromium-browser Xvfb x11vnc; do if command -v "$name"; then echo "Unexpected runtime program: $name"; exit 1; fi; done'
           python3 docker/smoke.py
+          docker exec lite-smoke /TwitchDropsMiner/TwitchDropsMiner --version
+          docker image inspect "$IMAGE:sha-$SHA-$ARCH" --format '{{.Size}}' | awk '{printf "Uncompressed image size: %.2f MB\n", $1/1000000}' | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Push validated architecture
         if: github.event_name != 'pull_request' && steps.check.outputs.exists != 'true'
         env:

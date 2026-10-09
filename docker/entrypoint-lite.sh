@@ -8,6 +8,6 @@ if [ "$(id -u)" -eq 0 ]; then
     mkdir -p config cache
     chown "$USER_ID:$GROUP_ID" /TwitchDropsMiner
     chown -R "$USER_ID:$GROUP_ID" config cache
-    exec gosu "$USER_ID:$GROUP_ID" python main_webui.py --stdlog "$@"
+    exec su-exec "$USER_ID:$GROUP_ID" /TwitchDropsMiner/TwitchDropsMiner --stdlog "$@"
 fi
-exec python main_webui.py --stdlog "$@"
+exec /TwitchDropsMiner/TwitchDropsMiner --stdlog "$@"
