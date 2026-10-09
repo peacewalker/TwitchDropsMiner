@@ -22,7 +22,9 @@ RUN apk add --no-cache ca-certificates tzdata su-exec openssl curl libstdc++ lib
 WORKDIR /TwitchDropsMiner
 COPY --from=builder --chown=1000:1000 --chmod=755 ["/app/dist/Twitch Drops Miner (by DevilXD)", "/TwitchDropsMiner/TwitchDropsMiner"]
 COPY --chmod=755 docker/entrypoint-lite.sh /entrypoint.sh
-RUN mkdir -p config cache && chown 1000:1000 /TwitchDropsMiner config cache
+RUN mkdir -p config cache docker \
+    && ln -s /entrypoint.sh docker/entrypoint-lite.sh \
+    && chown 1000:1000 /TwitchDropsMiner config cache
 EXPOSE 5800
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD sh -c 'protocol=http; [ "${SECURE_CONNECTION:-0}" = "1" ] && protocol=https; curl -kfs --max-time 8 -o /dev/null "${protocol}://127.0.0.1:${WEBUI_PORT:-5800}/health"'

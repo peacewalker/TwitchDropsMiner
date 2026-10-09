@@ -128,7 +128,8 @@ jobs:
           SHA: ${{ needs.prepare.outputs.sha }}
           ARCH: ${{ matrix.arch }}
         run: |
-          docker run -d --name lite-smoke -p 127.0.0.1:5800:5800 "$IMAGE:sha-$SHA-$ARCH"
+          docker run --rm "$IMAGE:sha-$SHA-$ARCH" --version
+          docker run -d --name lite-smoke --entrypoint /TwitchDropsMiner/docker/entrypoint-lite.sh -p 127.0.0.1:5800:5800 "$IMAGE:sha-$SHA-$ARCH"
           trap 'docker logs lite-smoke; docker rm -f lite-smoke' EXIT
           docker exec lite-smoke sh -c 'for name in python python3 pip chromium chromium-browser Xvfb x11vnc; do if command -v "$name"; then echo "Unexpected runtime program: $name"; exit 1; fi; done'
           python3 docker/smoke.py
