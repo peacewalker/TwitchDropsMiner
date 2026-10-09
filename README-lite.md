@@ -66,7 +66,7 @@ docker build -f Dockerfile.lite -t twitch-drops-miner:lite .
 
 基于 fireph WebUI 提交 `10706072459ce1125b6747e685bf5c5b3d1a69c6`。
 
-本地已通过 321 项测试，2 项需要 Chromium 的集成测试跳过。首次 Docker 构建及两种架构的容器验证由 GitHub Actions 完成；在 Actions 成功前不能将预定镜像地址当作已发布镜像使用。
+本地及 GitHub Actions 已通过 321 项测试，2 项需要 Chromium 的集成测试跳过。amd64 和 arm64 镜像均已构建并通过实际容器启动检查，WebUI 与健康检查可用，浏览器登录路由不存在。首次发布的源码为 `af2743e6d3e15f6f90fa3327f518d8589c5d9f7a`，公开镜像可以免登录拉取。
 
 来源：
 

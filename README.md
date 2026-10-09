@@ -1,4 +1,8 @@
-# Twitch Drops Miner (for Docker)
+# Twitch Drops Miner WebUI Lite
+
+本 fork 的 Docker 镜像：`ghcr.io/peacewalker/twitch-drops-miner:latest`（支持 `linux/arm64` 和 `linux/amd64`）。
+
+仅使用你提供的 `config/cookies.jar`，镜像不包含 Chromium / VNC；每 30 分钟直接检查并合并 DevilXD 上游，验证成功后发布镜像。完整部署与更新方法见 [README-lite.md](README-lite.md)。
 
 This application allows you to AFK mine timed Twitch drops, without having to worry about switching channels when the one you were watching goes offline, claiming the drops, or even receiving the stream data itself. This helps you save on bandwidth and hassle. This is a fork of https://github.com/DevilXD/TwitchDropsMiner that adds a web-based UI.
 
@@ -8,11 +12,11 @@ This application allows you to AFK mine timed Twitch drops, without having to wo
 - **Streamlined settings** - Moved settings into ./config folder
 - **Automated upstream sync** - Workflow to automatically merge updates from the upstream repository
 - **Enhanced error handling** - Improved error messages when settings files can't be loaded
-- **Chromium Login** - Opens twitch.tv login webpage in app
+- **Cookie-only Login** - Reuses a supplied valid `config/cookies.jar`; no embedded browser
 - **About tab links** - Repository URL updated in about tab
 
 > [!NOTE]
-> To run the application in Docker, see https://github.com/fireph/docker-twitch-drops-miner. DO NOT report any Docker issues to https://github.com/DevilXD/TwitchDropsMiner!
+> To run this fork in Docker, see [README-lite.md](README-lite.md). DO NOT report any Docker issues to https://github.com/DevilXD/TwitchDropsMiner!
 
 ### How It Works:
 
