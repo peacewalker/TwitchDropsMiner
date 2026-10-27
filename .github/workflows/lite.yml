@@ -4,7 +4,7 @@ on:
     branches: [webui]
   pull_request:
   schedule:
-    - cron: '17,47 * * * *'
+    - cron: '17 0 * * *'  # Daily at 08:17 Asia/Shanghai (00:17 UTC)
   workflow_dispatch:
 permissions:
   contents: read
