@@ -7,6 +7,7 @@
 - 只使用已有的 `config/cookies.jar` 登录，沿用原来的配置和缓存目录。
 - 不提供 Twitch 登录按钮，不收集密码或令牌。
 - 镜像不包含 Chromium、Xvfb、VNC、noVNC、zendriver，也不包含浏览器登录模块。
+- 精简版依赖独立维护在 `requirements-lite.txt`；`requirements.txt` 保持上游内容，减少同步冲突。
 - Cookie 缺失或失效时，等待你放入有效文件并重启容器，不启动浏览器、不循环重启。
 - 每天北京时间 08:17 检查 DevilXD/TwitchDropsMiner 的 `master`，直接合并更新。
 - 测试通过后构建并检查 amd64、arm64 镜像，全部成功才更新 `latest`。

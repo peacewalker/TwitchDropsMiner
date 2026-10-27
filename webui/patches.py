@@ -61,6 +61,7 @@ if os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "android-browser":
         return await self._twitch.gui.login.ask_browser_login()
 
     _twitch._AuthState._oauth_login = _android_browser_login
+    _twitch._AuthState._browser_login = _android_browser_login
 
 
 if os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "cookie-only":
@@ -76,3 +77,4 @@ if os.environ.get("WEBUI_TWITCH_LOGIN", "cookie-only") == "cookie-only":
         raise RuntimeError("Cookie-only login was interrupted")
 
     _twitch._AuthState._oauth_login = _cookie_only_login
+    _twitch._AuthState._browser_login = _cookie_only_login

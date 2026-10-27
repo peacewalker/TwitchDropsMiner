@@ -1,6 +1,8 @@
 import asyncio
 from unittest.mock import MagicMock
 
+import pytest
+
 from webui.adapters.login_form import LoginFormAdapter
 
 
@@ -12,7 +14,8 @@ def test_cookie_only_never_initializes_browser(monkeypatch):
     assert not hasattr(login, "_browser_display")
 
 
-def test_missing_cookie_waits_until_shutdown_without_starting_login(monkeypatch):
+@pytest.mark.parametrize("login_method", ["_oauth_login", "_browser_login"])
+def test_missing_cookie_waits_until_shutdown_without_starting_login(monkeypatch, login_method):
     import sys
     import types
     from webui.manager import WebUIManager
@@ -32,7 +35,7 @@ def test_missing_cookie_waits_until_shutdown_without_starting_login(monkeypatch)
 
         miner.gui.coro_unless_closed.side_effect = until_closed
         state = twitch._AuthState(miner)
-        task = asyncio.create_task(state._oauth_login())
+        task = asyncio.create_task(getattr(state, login_method)())
         await asyncio.sleep(0)
         assert not task.done()
         miner.gui.login.update.assert_called_once()

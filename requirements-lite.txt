@@ -1,4 +1,7 @@
--r requirements.txt
+# Keep browser and desktop dependencies from the upstream manifest out of Lite.
+aiohttp>=3.9,<4.0
+truststore
+pywin32; sys_platform == "win32"
 nicegui>=3.11.1,<4.0.0
 pwdlib[argon2]
 PyJWT
